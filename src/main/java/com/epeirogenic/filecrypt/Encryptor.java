@@ -17,19 +17,26 @@ public class Encryptor {
         encryptor.encrypt();
 	}
 
-
     private CommandLine commandLine;
+    private Options options;
 
     public Encryptor(String[] args) throws Exception {
 
-        commandLine = parseCommandLine(args);
+        options = createOptions();
+        try {
+            commandLine = parseCommandLine(args);
+        } catch(ParseException pe) {
+            System.err.println("Options:");
+            for(Object o : options.getOptions()) {
+                Option option = (Option)o;
+                System.err.println(option.toString());
+            }
+        }
     }
 
     private CommandLine parseCommandLine(String[] args) throws ParseException {
 
         CommandLineParser parser = new PosixParser();
-
-        Options options = createOptions();
         return parser.parse(options, args, false);
     }
 
@@ -70,14 +77,11 @@ public class Encryptor {
         StrongBinaryEncryptor binaryEncryptor = new StrongBinaryEncryptor();
         binaryEncryptor.setPassword(password);
 
-        byte[] myEncryptedBinary = binaryEncryptor.encrypt(fileAsBytes);
+        byte[] encryptedBinary = binaryEncryptor.encrypt(fileAsBytes);
 
         // do something with this
         File outputFile = createOutputFile(file);
-        FileUtils.writeByteArrayToFile(outputFile, myEncryptedBinary);
+        FileUtils.writeByteArrayToFile(outputFile, encryptedBinary);
 
-
-
-        byte[] plainBinary = binaryEncryptor.decrypt(myEncryptedBinary);
     }
 }
