@@ -1,4 +1,4 @@
 package com.epeirogenic.filecrypt;
 
-public class MainTest {
+public class EncryptorTest {
 }
