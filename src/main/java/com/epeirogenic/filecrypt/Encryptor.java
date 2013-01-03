@@ -3,9 +3,15 @@ package com.epeirogenic.filecrypt;
 import com.epeirogenic.checksum.Checksum;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.FileFileFilter;
+import org.apache.commons.io.filefilter.FileFilterUtils;
+import org.apache.commons.io.filefilter.HiddenFileFilter;
 import org.jasypt.util.binary.StrongBinaryEncryptor;
 
 import java.io.File;
+import java.io.FileFilter;
 
 public class Encryptor {
 
@@ -62,16 +68,44 @@ public class Encryptor {
 
         Checksum checksum = Checksum.MD5;
         String checksumString = checksum.generateFor(inputFile);
-        File path = new File(commandLine.getOptionValue("o", "."));
-        return new File(path, checksumString + '.' + commandLine.getOptionValue("e", DEFAULT_EXTENSION));
+        String extension = FilenameUtils.getExtension(inputFile.getName());
+        //File path = new File(commandLine.getOptionValue("o", "."));
+        File path = new File(FilenameUtils.getFullPath(inputFile.getPath()));
+        String fileName = checksumString + '.' + extension + '.' + commandLine.getOptionValue("e", DEFAULT_EXTENSION);
+        return new File(path, fileName);
     }
 
     public void encrypt() throws Exception {
 
         String password = commandLine.getOptionValue("p");
         String inputFile = commandLine.getOptionValue("i");
+        boolean recurse = commandLine.hasOption("r");
 
         File file = new File(inputFile);
+        if(file.isDirectory()) {
+            encryptDirectory(file, password, recurse);
+        } else {
+            encryptFile(file, password);
+        }
+    }
+
+    private void encryptDirectory(File directory, String password, boolean recurse) throws Exception {
+
+        FileFilter fileFilter = FileFilterUtils.and(FileFileFilter.FILE);
+        File[] files = directory.listFiles(fileFilter);
+        for(File file : files) {
+            encryptFile(file, password);
+        }
+
+        if(recurse) {
+            File[] subdirectories = directory.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY);
+            for(File subdirectory : subdirectories) {
+                encryptDirectory(subdirectory, password, recurse);
+            }
+        }
+    }
+
+    private void encryptFile(File file, String password) throws Exception {
         byte[] fileAsBytes = FileUtils.readFileToByteArray(file);
 
         StrongBinaryEncryptor binaryEncryptor = new StrongBinaryEncryptor();
@@ -82,6 +116,5 @@ public class Encryptor {
         // do something with this
         File outputFile = createOutputFile(file);
         FileUtils.writeByteArrayToFile(outputFile, encryptedBinary);
-
     }
 }

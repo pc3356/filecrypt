@@ -2,9 +2,13 @@ package com.epeirogenic.filecrypt;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.*;
 import org.jasypt.util.binary.StrongBinaryEncryptor;
 
 import java.io.File;
+import java.io.FileFilter;
+import java.io.FilenameFilter;
 import java.util.Collection;
 
 public class Decryptor {
@@ -47,9 +51,6 @@ public class Decryptor {
         Option password = new Option("p", "pass", true, "Password");
         password.setRequired(true);
         options.addOption(password);
-        Option outputFileName = new Option("n", "name", true, "Output file name");
-        outputFileName.setRequired(true);
-        options.addOption(outputFileName);
         options.addOption("a", "algorithm", true, "Algorithm to use (Default AES)");
         options.addOption("r", "recursive", false, "Recurse through subdirectories");
         options.addOption("o", "output", true, "Output path (default .)");
@@ -59,18 +60,50 @@ public class Decryptor {
     }
 
 
-    private File createOutputFile() throws Exception {
+    private File createOutputFile(File inputFile) throws Exception {
 
-        File path = new File(commandLine.getOptionValue("o", "."));
-        return new File(path, commandLine.getOptionValue("n"));
+        //File path = new File(commandLine.getOptionValue("o", "."));
+        File path = new File(FilenameUtils.getFullPath(inputFile.getPath()));
+        String outputFileName = FilenameUtils.removeExtension(inputFile.getName());
+        return new File(path, outputFileName);
     }
 
     public void decrypt() throws Exception {
 
         String password = commandLine.getOptionValue("p");
         String inputFile = commandLine.getOptionValue("i");
+        boolean recurse = commandLine.hasOption("r");
 
         File file = new File(inputFile);
+        if(file.isDirectory()) {
+            decryptDirectory(file, password, recurse);
+        } else {
+            decryptFile(file, password);
+        }
+
+    }
+
+    private void decryptDirectory(File directory, String password, boolean recurse) throws Exception {
+
+        FileFilter fileFilter = FileFilterUtils.and(
+            FileFileFilter.FILE,
+            new SuffixFileFilter(".fcp")
+        );
+
+        File[] files = directory.listFiles(fileFilter);
+        for(File file : files) {
+            decryptFile(file, password);
+        }
+
+        if(recurse) {
+            File[] subdirectories = directory.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY);
+            for(File subdirectory : subdirectories) {
+                decryptDirectory(subdirectory, password, recurse);
+            }
+        }
+    }
+
+    private void decryptFile(File file, String password) throws Exception {
         byte[] fileAsBytes = FileUtils.readFileToByteArray(file);
 
         StrongBinaryEncryptor binaryEncryptor = new StrongBinaryEncryptor();
@@ -79,8 +112,7 @@ public class Decryptor {
         byte[] decryptedBinary = binaryEncryptor.decrypt(fileAsBytes);
 
         // do something with this
-        File outputFile = createOutputFile();
+        File outputFile = createOutputFile(file);
         FileUtils.writeByteArrayToFile(outputFile, decryptedBinary);
-
     }
 }
