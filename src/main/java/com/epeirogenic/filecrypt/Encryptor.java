@@ -91,7 +91,7 @@ public class Encryptor {
 
     private void encryptDirectory(File directory, String password, boolean recurse) throws Exception {
 
-        FileFilter fileFilter = FileFilterUtils.and(FileFileFilter.FILE);
+        FileFilter fileFilter = FileFilterUtils.and(FileFileFilter.FILE, HiddenFileFilter.VISIBLE);
         File[] files = directory.listFiles(fileFilter);
         for(File file : files) {
             encryptFile(file, password);
@@ -113,7 +113,6 @@ public class Encryptor {
 
         byte[] encryptedBinary = binaryEncryptor.encrypt(fileAsBytes);
 
-        // do something with this
         File outputFile = createOutputFile(file);
         FileUtils.writeByteArrayToFile(outputFile, encryptedBinary);
     }
