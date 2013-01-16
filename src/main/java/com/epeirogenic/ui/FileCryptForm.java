@@ -6,6 +6,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.FileFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.HiddenFileFilter;
+import org.apache.log4j.Logger;
 import org.jasypt.encryption.pbe.StandardPBEByteEncryptor;
 
 import javax.swing.*;
@@ -17,26 +18,13 @@ import java.util.List;
 
 public class FileCryptForm extends JDialog {
 
-    private JPanel panel;
-    private JButton browseInputButton;
-    private JTextField inputFileField;
-    private JButton browseOutputButton;
-    private JTextField outputFileField;
-
-    private JPasswordField passwordField;
-
-    private JButton encryptButton;
-    private JButton decryptButton;
-
-    private JLabel inputFileLabel;
-    private JLabel passwordLabel;
-    private JLabel outputFileLabel;
+    private static final Logger LOGGER = Logger.getLogger(FileCryptForm.class);
 
     private Worker worker;
 
     private File inputFile;
-    private File outputFile;
 
+    private File outputFile;
     private final static String DEFAULT_EXTENSION = "fcf";
 
     private EncryptorService encryptorService;
@@ -119,6 +107,8 @@ public class FileCryptForm extends JDialog {
 
         this.pack();
         this.setVisible(true);
+
+        LOGGER.info("Created UI components");
 	}
 
     private void encrypt() {
@@ -152,25 +142,26 @@ public class FileCryptForm extends JDialog {
     }
 
     private void performCryptOperation(File input, char[] password, boolean decrypt) {
-        System.out.println(password == null ? "PASSWORD IS NULL" : String.valueOf(password));
-        File output = createOutputFile(input);
-
+        LOGGER.info(password == null ? "PASSWORD IS NULL" : "PASSWORD OK");
         try {
             if(decrypt) {
-                System.out.println("Decrypting " + input.getName());
+                File output = createDecryptOutputFile(outputFile);
+                LOGGER.info("Decrypting " + input.getName());
+                LOGGER.info("To: " + output.getName());
                 encryptorService.decrypt(input, output, password);
             } else {
-                System.out.println("Encrypting " + input.getName());
+                File output = createEncryptOutputFile(outputFile);
+                LOGGER.info("Encrypting " + input.getName());
+                LOGGER.info("To: " + output.getName());
                 encryptorService.encrypt(input, output, password);
             }
         } catch(Exception e) {
-            System.err.println("Error encrypting file " + input.getName() +
-                    (e.getMessage() == null ? "" : " : " + e.getMessage()));
-            e.printStackTrace(System.err);
+            LOGGER.error("Error encrypting file " + input.getName() +
+                    (e.getMessage() == null ? "" : " : " + e.getMessage()), e);
         }
     }
 
-    private File createOutputFile(File inputFile) {
+    private File createEncryptOutputFile(File inputFile) {
 
         if(outputFile.isFile()) {
             return outputFile;
@@ -179,18 +170,29 @@ public class FileCryptForm extends JDialog {
         }
     }
 
+    public File createDecryptOutputFile(File inputFile) {
+        File path = inputFile.isDirectory() ? inputFile : inputFile.getParentFile();
+        String outputFileName = FilenameUtils.removeExtension(inputFile.getName());
+        return new File(path, outputFileName);
+    }
+
     private File createChecksumFilename(File inputFile) {
 
         try {
             Checksum checksum = Checksum.MD5;
             String checksumString = checksum.generateFor(inputFile);
             String extension = FilenameUtils.getExtension(inputFile.getName());
-            File path = new File(FilenameUtils.getFullPath(outputFile.getPath()));
+
+            File path;
+            if(outputFile.isDirectory()) {
+                path = outputFile;
+            } else {
+                path = outputFile.getParentFile();
+            }
             String fileName = checksumString + '.' + extension + '.' + DEFAULT_EXTENSION;
             return new File(path, fileName);
         } catch(Exception e) {
-            System.err.println("Unable to create output file");
-            e.printStackTrace(System.err);
+            LOGGER.error("Unable to create output file", e);
             return null;
         }
     }
@@ -246,7 +248,7 @@ public class FileCryptForm extends JDialog {
     }
 
     private File chooseFile(String title, File start) {
-        System.out.println("Open file dialog");
+        LOGGER.debug("Open file dialog");
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Choose " + title + " file");
@@ -258,13 +260,13 @@ public class FileCryptForm extends JDialog {
 
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 
-            System.out.println("getCurrentDirectory(): " + fileChooser.getCurrentDirectory());
-            System.out.println("getSelectedFile() : " + fileChooser.getSelectedFile());
+            LOGGER.debug("getCurrentDirectory(): " + fileChooser.getCurrentDirectory());
+            LOGGER.debug("getSelectedFile() : " + fileChooser.getSelectedFile());
 
             return fileChooser.getSelectedFile();
 
         } else {
-            System.out.println("No Selection ");
+            LOGGER.debug("No file selection ");
             return null;
         }
     }
@@ -305,11 +307,26 @@ public class FileCryptForm extends JDialog {
         protected void done() {
             super.done();
         }
-    }
 
+    }
     public static void main(String[] args) {
 
         EncryptorService encryptorService = new EncryptorService();
         new FileCryptForm(encryptorService);
     }
+
+    private JPanel panel;
+    private JButton browseInputButton;
+    private JTextField inputFileField;
+    private JButton browseOutputButton;
+    private JTextField outputFileField;
+
+    private JPasswordField passwordField;
+
+    private JButton encryptButton;
+    private JButton decryptButton;
+
+    private JLabel inputFileLabel;
+    private JLabel passwordLabel;
+    private JLabel outputFileLabel;
 }
