@@ -91,7 +91,7 @@
     </dependencies>
 
     <build>
-        <finalName>fileCrypt</finalName>
+        <finalName>filecrypt</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
