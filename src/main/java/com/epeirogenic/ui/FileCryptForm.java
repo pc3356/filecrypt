@@ -37,6 +37,8 @@ public class FileCryptForm extends JDialog {
 
 	private void createUIComponents() {
 
+        prepareUIComponents();
+
         setContentPane(panel);
         setModal(true);
         //getRootPane().setDefaultButton(browseInputButton);
@@ -107,8 +109,6 @@ public class FileCryptForm extends JDialog {
 
         this.pack();
         this.setVisible(true);
-
-        LOGGER.info("Created UI components");
 	}
 
     private void encrypt() {
@@ -146,14 +146,16 @@ public class FileCryptForm extends JDialog {
         try {
             if(decrypt) {
                 File output = createDecryptOutputFile(outputFile);
-                LOGGER.info("Decrypting " + input.getName());
-                LOGGER.info("To: " + output.getName());
+                LOGGER.debug("Decrypting " + input.getName());
+                LOGGER.debug("To: " + output.getName());
                 encryptorService.decrypt(input, output, password);
+                LOGGER.info("Decrypted: " + input.getAbsolutePath() + " to: " + output.getAbsolutePath());
             } else {
-                File output = createEncryptOutputFile(outputFile);
-                LOGGER.info("Encrypting " + input.getName());
-                LOGGER.info("To: " + output.getName());
+                File output = createEncryptOutputFile(inputFile);
+                LOGGER.debug("Encrypting " + input.getName());
+                LOGGER.debug("To: " + output.getName());
                 encryptorService.encrypt(input, output, password);
+                LOGGER.info("Encrypted: " + input.getAbsolutePath() + " to: " + output.getAbsolutePath());
             }
         } catch(Exception e) {
             LOGGER.error("Error encrypting file " + input.getName() +
@@ -163,11 +165,10 @@ public class FileCryptForm extends JDialog {
 
     private File createEncryptOutputFile(File inputFile) {
 
-        if(outputFile.isFile()) {
-            return outputFile;
-        } else {
+        if(outputFile.isDirectory()) {
             return createChecksumFilename(inputFile);
         }
+        return outputFile;
     }
 
     public File createDecryptOutputFile(File inputFile) {
@@ -183,6 +184,9 @@ public class FileCryptForm extends JDialog {
             String checksumString = checksum.generateFor(inputFile);
             String extension = FilenameUtils.getExtension(inputFile.getName());
 
+            LOGGER.debug("Checksum: " + checksumString);
+            LOGGER.debug("Extension: " + extension);
+
             File path;
             if(outputFile.isDirectory()) {
                 path = outputFile;
@@ -190,7 +194,14 @@ public class FileCryptForm extends JDialog {
                 path = outputFile.getParentFile();
             }
             String fileName = checksumString + '.' + extension + '.' + DEFAULT_EXTENSION;
-            return new File(path, fileName);
+            LOGGER.debug("Filename: " + fileName);
+
+            File output = new File(path, fileName);
+
+            LOGGER.debug("Output file (checksum name): " + output.getAbsolutePath());
+
+            return output;
+
         } catch(Exception e) {
             LOGGER.error("Unable to create output file", e);
             return null;
@@ -284,6 +295,25 @@ public class FileCryptForm extends JDialog {
         }
     }
 
+    private void prepareUIComponents() {
+        if(panel == null) {
+
+        }
+//        browseInputButton;
+//        inputFileField;
+//        browseOutputButton;
+//        outputFileField;
+//
+//        passwordField;
+//
+//        encryptButton;
+//        decryptButton;
+//
+//        inputFileLabel;
+//        passwordLabel;
+//        outputFileLabel;
+    }
+
     /* =============================================== */
 
     class Worker extends SwingWorker<Void, String> {
@@ -309,6 +339,9 @@ public class FileCryptForm extends JDialog {
         }
 
     }
+
+    /* =============================================== */
+
     public static void main(String[] args) {
 
         EncryptorService encryptorService = new EncryptorService();
