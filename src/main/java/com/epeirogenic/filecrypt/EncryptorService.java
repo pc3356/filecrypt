@@ -2,21 +2,17 @@ package com.epeirogenic.filecrypt;
 
 import org.apache.commons.io.FileUtils;
 import org.jasypt.encryption.pbe.PBEByteCleanablePasswordEncryptor;
+import org.jasypt.util.binary.BinaryEncryptor;
+import org.jasypt.util.binary.StrongBinaryEncryptor;
 
 import java.io.File;
 
 public class EncryptorService {
 
-    private PBEByteCleanablePasswordEncryptor binaryEncryptor;
-
-    private boolean initialised = false;
-
     public byte[] encrypt(File input, char[] password) throws Exception {
 
-        if(!initialised) {
-            binaryEncryptor.setPasswordCharArray(password);
-            initialised = true;
-        }
+        StrongBinaryEncryptor binaryEncryptor = new StrongBinaryEncryptor();
+        binaryEncryptor.setPasswordCharArray(password);
 
         byte[] fileAsBytes = FileUtils.readFileToByteArray(input);
         return binaryEncryptor.encrypt(fileAsBytes);
@@ -30,10 +26,8 @@ public class EncryptorService {
 
     public byte[] decrypt(File input, char[] password) throws Exception {
 
-        if(!initialised) {
-            binaryEncryptor.setPasswordCharArray(password);
-            initialised = true;
-        }
+        StrongBinaryEncryptor binaryEncryptor = new StrongBinaryEncryptor();
+        binaryEncryptor.setPasswordCharArray(password);
 
         byte[] fileAsBytes = FileUtils.readFileToByteArray(input);
         return binaryEncryptor.decrypt(fileAsBytes);
@@ -43,9 +37,5 @@ public class EncryptorService {
 
         byte[] decryptedBinary = decrypt(input, password);
         FileUtils.writeByteArrayToFile(output, decryptedBinary);
-    }
-
-    public void setBinaryEncryptor(PBEByteCleanablePasswordEncryptor binaryEncryptor) {
-        this.binaryEncryptor = binaryEncryptor;
     }
 }
