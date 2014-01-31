@@ -189,7 +189,6 @@ public class FileCryptForm extends JDialog {
 
         try {
             Checksum checksum = Checksum.MD5;
-            // trying to cteate a checksum of the directory, rather than the individual file
             String checksumString = checksum.generateFor(inputFile);
             String extension = FilenameUtils.getExtension(inputFile.getName());
 
