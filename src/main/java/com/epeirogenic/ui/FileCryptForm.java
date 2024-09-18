@@ -4,11 +4,11 @@ import com.epeirogenic.checksum.Checksum;
 import com.epeirogenic.filecrypt.EncryptorService;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.filefilter.FileFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.HiddenFileFilter;
-import org.apache.log4j.Logger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,9 +17,8 @@ import java.io.File;
 import java.io.FileFilter;
 import java.util.List;
 
+@Slf4j
 public class FileCryptForm extends JDialog {
-
-    private static final Logger LOGGER = Logger.getLogger(FileCryptForm.class);
 
     private Worker worker;
 
@@ -28,13 +27,13 @@ public class FileCryptForm extends JDialog {
     private File outputFile;
     private final static String DEFAULT_EXTENSION = "fcf";
 
-    private EncryptorService encryptorService;
+    private final EncryptorService encryptorService;
 
     public FileCryptForm() {
         this(new EncryptorService());
     }
 
-    public FileCryptForm(EncryptorService encryptorService) {
+    public FileCryptForm(final EncryptorService encryptorService) {
 
         this.encryptorService = encryptorService;
         createUIComponents();
@@ -42,52 +41,44 @@ public class FileCryptForm extends JDialog {
 
     private void createUIComponents() {
 
-        LOGGER.info("Creating UI components");
+        log.info("Creating UI components");
 
         setContentPane(panel);
         setModal(true);
 
-        browseInputButton.setEnabled(true);
-        browseInputButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent actionEvent) {
-                        chooseInputFile();
-                    }
-                }
-        );
+        if (browseInputButton != null) {
+            browseInputButton.setEnabled(true);
+            browseInputButton.addActionListener(
+                    actionEvent -> chooseInputFile()
+            );
+        }
 
-        browseOutputButton.setEnabled(true);
-        browseOutputButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent actionEvent) {
-                        chooseOutputFile();
-                    }
-                }
-        );
+        if (browseOutputButton != null) {
+            browseOutputButton.setEnabled(true);
+            browseOutputButton.addActionListener(
+                    actionEvent -> chooseOutputFile()
+            );
+        }
 
-        encryptButton.setEnabled(false);
-        encryptButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent actionEvent) {
+        if (encryptButton != null) {
+            encryptButton.setEnabled(false);
+            encryptButton.addActionListener(
+                    actionEvent -> {
                         encrypt();
                         passwordField.setText("");
                     }
-                }
-        );
+            );
+        }
 
-        decryptButton.setEnabled(false);
-        decryptButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent actionEvent) {
+        if (decryptButton != null) {
+            decryptButton.setEnabled(false);
+            decryptButton.addActionListener(
+                    actionEvent -> {
                         decrypt();
                         passwordField.setText("");
                     }
-                }
-        );
+            );
+        }
 
         // call onCancel() when cross is clicked
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -100,13 +91,13 @@ public class FileCryptForm extends JDialog {
         });
 
         // call onCancel() on ESCAPE
-        panel.registerKeyboardAction(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
+        if (panel != null) {
+            panel.registerKeyboardAction(e -> {
                 if (e != null) {
                     onCancel();
                 }
-            }
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+            }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        }
 
         worker = new Worker();
     }
@@ -119,51 +110,50 @@ public class FileCryptForm extends JDialog {
         } else {
             encryptFile(inputFile, password);
         }
-        LOGGER.info("Encryption complete");
+        log.info("Encryption complete");
         statusField.setText("Encryption complete");
     }
 
-    private void encryptFile(File input, char[] password) {
+    private void encryptFile(final File input, final char[] password) {
         performCryptOperation(input, password, false);
     }
 
     private void decrypt() {
 
-        char[] password = prepareForOperation();
+        var password = prepareForOperation();
         if (inputFile.isDirectory()) {
             iterate(inputFile, password, true);
         } else {
             decryptFile(inputFile, password);
         }
-        LOGGER.info("Decryption complete");
+        log.info("Decryption complete");
         statusField.setText("Decryption complete");
     }
 
-    private void decryptFile(File input, char[] password) {
+    private void decryptFile(final File input, final char[] password) {
         performCryptOperation(input, password, true);
     }
 
-    private void performCryptOperation(File input, char[] password, boolean decrypt) {
-        LOGGER.debug(password == null ? "PASSWORD IS NULL" : "PASSWORD OK");
+    private void performCryptOperation(final File input, final char[] password, final boolean decrypt) {
+        log.debug(password == null ? "PASSWORD IS NULL" : "PASSWORD OK");
         try {
             if (decrypt) {
-                File output = createDecryptOutputFile(input);
-                LOGGER.debug("Decrypting " + input.getName());
-                LOGGER.debug("To: " + output.getName());
+                var output = createDecryptOutputFile(input);
+                log.debug("Decrypting {}", input.getName());
+                log.debug("To: {}", output.getName());
                 statusField.setText(input.getName());
                 encryptorService.decrypt(input, output, password);
-                LOGGER.debug("Decrypted: " + input.getAbsolutePath() + " to: " + output.getAbsolutePath());
+                log.debug("Decrypted: {} to: {}", input.getAbsolutePath(), output.getAbsolutePath());
             } else {
-                File output = createEncryptOutputFile(input);
-                LOGGER.debug("Encrypting " + input.getName());
-                LOGGER.debug("To: " + output.getName());
+                var output = createEncryptOutputFile(input);
+                log.debug("Encrypting {}", input.getName());
+                log.debug("To: {}", output.getName());
                 statusField.setText(input.getName());
                 encryptorService.encrypt(input, output, password);
-                LOGGER.debug("Encrypted: " + input.getAbsolutePath() + " to: " + output.getAbsolutePath());
+                log.debug("Encrypted: {} to: {}", input.getAbsolutePath(), output.getAbsolutePath());
             }
         } catch (Exception e) {
-            LOGGER.error("Error encrypting file " + input.getName() +
-                    (e.getMessage() == null ? "" : " : " + e.getMessage()), e);
+            log.error("Error encrypting file {}", input.getName(), e);
         }
     }
 
@@ -178,8 +168,7 @@ public class FileCryptForm extends JDialog {
     public File createDecryptOutputFile(File inputFile) {
 
         if (outputFile.isDirectory()) {
-            String outputFileName = FilenameUtils.removeExtension(inputFile.getName());
-            return new File(outputFile, outputFileName);
+            return new File(outputFile, FilenameUtils.removeExtension(inputFile.getName()));
         } else {
             return outputFile;
         }
@@ -188,12 +177,12 @@ public class FileCryptForm extends JDialog {
     private File createChecksumFilename(File inputFile) {
 
         try {
-            Checksum checksum = Checksum.MD5;
-            String checksumString = checksum.generateFor(inputFile);
-            String extension = FilenameUtils.getExtension(inputFile.getName());
+            var checksum = Checksum.MD5;
+            var checksumString = checksum.generateFor(inputFile);
+            var extension = FilenameUtils.getExtension(inputFile.getName());
 
-            LOGGER.debug("Checksum: " + checksumString);
-            LOGGER.debug("Extension: " + extension);
+            log.debug("Checksum: {}", checksumString);
+            log.debug("Extension: {}", extension);
 
             File path;
             if (outputFile.isDirectory()) {
@@ -201,17 +190,17 @@ public class FileCryptForm extends JDialog {
             } else {
                 path = outputFile.getParentFile();
             }
-            String fileName = checksumString + '.' + extension + '.' + DEFAULT_EXTENSION;
-            LOGGER.debug("Filename: " + fileName);
+            var fileName = checksumString + '.' + extension + '.' + DEFAULT_EXTENSION;
+            log.debug("Filename: {}", fileName);
 
-            File output = new File(path, fileName);
+            var output = new File(path, fileName);
 
-            LOGGER.debug("Output file (checksum name): " + output.getAbsolutePath());
+            log.debug("Output file (checksum name): {}", output.getAbsolutePath());
 
             return output;
 
         } catch (Exception e) {
-            LOGGER.error("Unable to create output file", e);
+            log.error("Unable to create output file", e);
             return null;
         }
     }
@@ -234,10 +223,11 @@ public class FileCryptForm extends JDialog {
     private void iterate(File input, char[] password, boolean decrypt) {
 
         if (input.isDirectory()) {
-            FileFilter fileFilter = FileFilterUtils.and(FileFileFilter.FILE, HiddenFileFilter.VISIBLE);
-            File[] files = input.listFiles(fileFilter);
+            final FileFilter fileFilter = FileFilterUtils.and(FileFileFilter.FILE, HiddenFileFilter.VISIBLE);
+            var files = input.listFiles(fileFilter);
 
-            for (File file : files) {
+            assert files != null;
+            for (var file : files) {
                 performCryptOperation(file, password, decrypt);
             }
         }
@@ -256,7 +246,8 @@ public class FileCryptForm extends JDialog {
             encryptButton.setEnabled(true);
             decryptButton.setEnabled(true);
         }
-        statusField.setText("");
+        log.info("Input: {}", inputFile);
+        statusField.setText(inputFile.getName());
     }
 
     private void chooseOutputFile() {
@@ -267,8 +258,8 @@ public class FileCryptForm extends JDialog {
         statusField.setText("");
     }
 
-    private File chooseFile(String title, File start) {
-        LOGGER.debug("Open file dialog");
+    private File chooseFile(final String title, final File start) {
+        log.debug("Open file dialog");
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Choose " + title + " file");
@@ -280,13 +271,13 @@ public class FileCryptForm extends JDialog {
 
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 
-            LOGGER.debug("getCurrentDirectory(): " + fileChooser.getCurrentDirectory());
-            LOGGER.debug("getSelectedFile() : " + fileChooser.getSelectedFile());
+            log.debug("getCurrentDirectory(): {}", fileChooser.getCurrentDirectory());
+            log.debug("getSelectedFile() : {}", fileChooser.getSelectedFile());
 
             return fileChooser.getSelectedFile();
 
         } else {
-            LOGGER.debug("No file selection ");
+            log.debug("No file selection ");
             return null;
         }
     }
@@ -382,17 +373,17 @@ public class FileCryptForm extends JDialog {
 
     /* =============================================== */
 
-    class Worker extends SwingWorker<Void, String> {
+    static class Worker extends SwingWorker<Void, String> {
 
         @Override
         protected Void doInBackground() throws Exception {
-
+            log.info("doInBackground()");
             return null;
         }
 
         @Override
         protected void process(List<String> messages) {
-
+            log.info("Process: {}", messages);
         }
 
         public void publish(String message) {
@@ -408,16 +399,16 @@ public class FileCryptForm extends JDialog {
 
     /* =============================================== */
 
-    public static void main(String[] args) {
-        JFrame frame = new JFrame("FileCryptForm");
-        frame.setContentPane(new FileCryptForm().panel);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setTitle("FileCrypt");
-        frame.setResizable(false);
-        frame.setLocation(new Point(500, 300));
-        frame.pack();
-        frame.setVisible(true);
-    }
+//    public static void main(String[] args) {
+//        var frame = new JFrame("FileCryptForm");
+//        frame.setContentPane(new FileCryptForm().panel);
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        frame.setTitle("FileCrypt");
+//        frame.setResizable(false);
+//        frame.setLocation(new Point(500, 300));
+//        frame.pack();
+//        frame.setVisible(true);
+//    }
 
     private JPanel panel;
     private JButton browseInputButton;
