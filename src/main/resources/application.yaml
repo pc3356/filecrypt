@@ -1,0 +1,5 @@
+logging:
+  level:
+    root: DEBUG
+    org.springframework: WARN
+    com.epeirogenic: ${LOG_LEVEL:DEBUG}
